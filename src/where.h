@@ -1,7 +1,7 @@
-// everywho · where.h — the fold: every RawEvent lands in one process, one directory node, one
-// file entry and one op counter; a Snapshot is an immutable top-K copy for views.
-// The trie and its fold rules are facet's (C:\facet\facets.cpp) with per-process and per-op
-// dimensions added; the attribution rules are named and switchable (--raw).
+// everywho · where.h — the fold: every event (or counter delta) lands in one process, one
+// directory node, one file entry and one op counter; a Snapshot is an immutable top-K copy for
+// views. Stage 0 folds per process and per volume (the counters tier); the directory trie, the
+// per-file table and the bursts arrive with the ETW tier (Stage 2) on the same API.
 #pragma once
 #include <cstdint>
 #include <string>
@@ -16,14 +16,17 @@
 namespace everywho {
 
 struct IoCounters {
-    uint64_t file_read = 0, file_write = 0;    // bytes requested by the process
-    uint64_t disk_read = 0, disk_write = 0;    // bytes that reached the media (DiskIo)
-    uint64_t attributed_write = 0;             // writeback re-attributed to this owner (derived, labelled)
-    uint64_t unnamed = 0;                      // bytes whose file could not be named
+    uint64_t file_read = 0, file_write = 0, other_bytes = 0;   // bytes the process asked for (other = ioctl / misc transfers)
+    uint64_t disk_read = 0, disk_write = 0;                    // bytes that reached the media (ETW tier)
+    uint64_t attributed_write = 0;                             // writeback re-attributed to this owner (derived, labelled)
+    uint64_t unnamed = 0;                                      // bytes whose file could not be named
     uint32_t ops[kOpKinds] = {};
-    uint32_t files = 0;                        // distinct files touched
-    uint32_t new_files = 0;                    // files created in the window — files per minute is derived from this and window_ms
+    uint32_t ops_other = 0;                                    // counters tier: "other" operations
+    uint32_t files = 0;                                        // distinct files touched
+    uint32_t new_files = 0;                                    // files created in the window
     void add(const IoCounters& o);
+    uint64_t total_ops() const;
+    bool empty() const { return !file_read && !file_write && !other_bytes && !disk_read && !disk_write && !total_ops(); }
 };
 
 // facet's provenance signal, live: thousands a minute is a clone or extract, a dozen is an agent, one or two is a hand
@@ -63,34 +66,40 @@ struct Burst {
 };
 
 struct VolumeStat {
-    wchar_t letter = 0;
-    std::wstring device;                       // \Device\HarddiskVolumeN
+    wchar_t letter = 0;                        // the first letter on the disk ("0 C:" → C)
+    std::wstring letters;                      // every letter PDH lists for the disk
+    std::wstring device;                       // \Device\HarddiskVolumeN when known
+    std::wstring instance;                     // the PDH instance name, verbatim
     uint32_t disk = 0;
-    IoCounters io;
+    IoCounters io;                             // bytes over the interval (ETW tier fills file_*)
+    double read_bps = 0, write_bps = 0;        // media rates (PDH: Disk Read/Write Bytes/sec)
+    double read_iops = 0, write_iops = 0;
     double queue = 0.0, busy_pct = 0.0;
     double response_ms_p50 = 0.0, response_ms_p95 = 0.0;
-    uint32_t read_iops = 0, write_iops = 0;
 };
 
 struct ProcStat {
     Identity id;
     IoCounters io;
-    std::vector<std::pair<uint32_t, IoCounters>> top_dirs;   // (node, io), by bytes
+    std::vector<std::pair<uint32_t, IoCounters>> top_dirs;   // (node, io), by bytes (ETW tier)
 };
 
 // The frozen, renderable state of one interval (or one-shot window). Top-K everywhere.
 struct Snapshot {
-    uint64_t wall_ms = 0;
+    uint64_t wall_ms = 0;                      // wall clock at the snapshot (FILETIME ms since epoch)
     uint64_t window_ms = 0;                    // measured length
     Tier tier = Tier::Counters;
     bool elevated = false;
     EtwStats etw;
     std::vector<VolumeStat> volumes;
-    std::vector<ProcStat> procs;               // by the requested sort
+    std::vector<ProcStat> procs;               // by the requested sort, top_procs at most
+    uint32_t procs_total = 0;                  // before truncation (with any I/O in the window)
+    uint32_t processes_seen = 0;               // every process the kernel listed
     std::vector<DirNode> nodes;                // a pruned copy of the trie (top branches only)
     std::vector<FileEntry> files;              // top-K by bytes
     std::vector<Burst> bursts;
-    uint64_t total_files = 0;                  // distinct files touched in the window (for --paths, the full set is kept separately)
+    uint64_t total_files = 0;
+    IoCounters total;                          // the sum over every process in the window
     std::string error;
 };
 
@@ -113,23 +122,25 @@ class Fold {
 public:
     explicit Fold(const FoldConfig& cfg, IdentityTable& who);
     ~Fold();
+    Fold(const Fold&) = delete;
+    Fold& operator=(const Fold&) = delete;
 
-    // The hot path: called on the collector thread for every RawEvent after the collector has
-    // resolved pid/tid and (for names) the DOS path. Never allocates for known paths.
-    void add(const RawEvent& ev, std::wstring_view dos_path /* empty when unnamed / not applicable */);
+    // The ETW hot path: called on the collector thread for every RawEvent after pid/tid and
+    // (for names) the DOS path are resolved. Never allocates for known paths.
+    void add(const RawEvent& ev, std::wstring_view dos_path);
 
     // Counters tier: per-process deltas per tick (no paths).
-    void add_process_counters(uint32_t pid, uint64_t read_delta, uint64_t write_delta, uint32_t reads, uint32_t writes);
+    void add_process_counters(uint32_t pid, const IoCounters& delta);
     void add_volume(const VolumeStat& v);
+    void set_processes_seen(uint32_t n);
 
-    // The tick: close the interval, build a Snapshot (sorted, pruned), reset interval counters.
-    // `cumulative` = true keeps totals across ticks (one-shot window); false = per-interval.
-    Snapshot snapshot(SortKey sort, bool group, bool cumulative);
+    // Close the interval and build a Snapshot: cumulative = since start (the one-shot window),
+    // else the interval since the last snapshot. Interval counters reset either way.
+    Snapshot snapshot(SortKey sort, bool cumulative, uint64_t window_ms);
 
-    // --paths: every distinct path touched since start (or since the last drain), in first-touch order.
+    // --paths: every distinct path touched since start (or since the last drain), first-touch order.
     std::vector<std::wstring> drain_paths();
 
-    // memory accounting for --selftest / --where
     size_t nodes() const;
     size_t files() const;
     size_t bytes_in_use() const;
@@ -139,21 +150,21 @@ private:
     Impl* p_;
 };
 
-// Name resolution owned by the collector but specified here because the fold consumes its output:
 // NT path → DOS path with a device table (ETW.md §3). Returns false for non-file devices.
 class DevicePaths {
 public:
     DevicePaths();
-    void refresh();                                            // QueryDosDevice for every letter + volume GUID paths
-    bool to_dos(std::wstring_view nt, std::wstring& dos) const;   // \Device\HarddiskVolume3\x → C:\x; \??\C:\x; \SystemRoot\x; \Device\Mup\s\p
+    void refresh();                                            // QueryDosDevice for every letter + SystemRoot
+    void set_table(std::vector<std::pair<std::wstring, std::wstring>> nt_to_dos, std::wstring system_root);   // tests
+    bool to_dos(std::wstring_view nt, std::wstring& dos) const;
     bool is_device(std::wstring_view nt) const;                // NamedPipe, Mailslot, Afd, Null, ShadowCopy…
-    std::vector<std::pair<wchar_t, std::wstring>> table() const;
+    const std::vector<std::pair<std::wstring, std::wstring>>& table() const { return map_; }
 private:
     std::vector<std::pair<std::wstring, std::wstring>> map_;   // (NT prefix, DOS prefix), longest first
     std::wstring system_root_;
 };
 
-// facet's directory view over the fold's nodes, so the rail and the report share one rule set.
+// facet's directory view over the fold's nodes (ETW tier).
 struct DirLine {
     int level = 0;
     std::string label;

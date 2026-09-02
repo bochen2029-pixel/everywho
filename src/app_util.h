@@ -12,7 +12,7 @@
 
 namespace everywho {
 
-constexpr const char* kVersion = "0.0.0";          // blueprint; 0.1.0 is Stage 0
+constexpr const char* kVersion = "0.1.0";          // Stage 0: the counters tier, identity, the report
 constexpr uint64_t kUnknown64 = ~0ull;             // "not reported" — never confuse with 0
 constexpr uint64_t kTicksPerSec = 10000000ull;     // FILETIME resolution
 constexpr uint64_t kTicksPerDay = 864000000000ull;

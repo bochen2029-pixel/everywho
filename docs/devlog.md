@@ -39,3 +39,36 @@ Running notes, newest at the bottom. Decisions, measurements, test results, trap
   (ADR-015). Left where they are: portwho (a network band later, ROADMAP "After") and the fleet
   board (that is `muster`, the tool after this one). The effort estimate is now written down.
 - `next.md` in facet now points here as the canonical design; everywho is the name.
+
+## 2026-09-02 · Stage 0 built — 0.1.0, the counters tier
+
+- Sources: `sys.h` (the Windows layer), `who.cpp` (identity), `counters.cpp` (the process list +
+  PDH), `where.cpp` (the fold, per process and per volume for now), `shell.cpp` (icon,
+  shortcut), `everywho.cpp` (every mode). One build, zero warnings under /W4 /WX.
+- The counters tier turned out simpler than the blueprint assumed: `SystemProcessInformation`
+  carries every process's cumulative read / write / other transfer and operation counts in the
+  same record as its identity — one syscall for the whole box, no handles, every user's
+  processes, unelevated. Per-process handles are opened once per new pid, for enrichment only
+  (image path; command line via ProcessCommandLineInformation, which needs no VM_READ; the
+  working directory from the PEB, which does; the user from the token).
+- PDH `\PhysicalDisk(*)` with English counter names gives media-level rates per disk; the
+  instance names ("1 C:", "0 D:", "2 E:") carry the letters. `IOCTL_STORAGE_GET_DEVICE_NUMBER`
+  on `\.\C:` confirms the letter → disk map without elevation.
+- Measured on the reference box: 268 processes listed; the Stage 0 falsifier held at 100 %
+  (working directory readable for 20 of the top 20 own-user I/O processes; 148 of 148 own-user
+  processes overall); an 8 MB planted write shows as 8.0 MB in the next tick; 3 PDH instances
+  with letters; the report, JSON, NDJSON, stamp, spool and MCP all answer.
+- The identity finding that reshaped a rule: on this box `claude.exe` is two things. Five are
+  the Claude desktop app's Electron processes (WindowsApps package, `--type=renderer|gpu-process
+  |utility`, cwd `system32`); two are the Claude Code CLI under `AppData\Roaming\Claude\claude-code
+  \<ver>\`, driven with `--output-format stream-json … --resume=<uuid>`, cwd = the project. The
+  rule now tells them apart by image path and arguments, reads the session id from `--resume=`
+  / `--session-id` (rule `cmdline`), and the report groups by name *and* harness so the app and
+  the CLI never share a row. The agent shell running this session is itself elevated, so the
+  ETW tier can be tested from here in Stage 1.
+- Header changes against the blueprint, recorded here as the CLAUDE.md asks: `classify_image`
+  gained the image path; `enumerate_now` returns bool; `ProcSample` moved into `who.h`;
+  `VolumeStat` gained media rates and the PDH instance; `IoCounters` gained `other_bytes`,
+  `ops_other`; `Fold::snapshot(sort, cumulative, window_ms)`; `DevicePaths::set_table` for tests.
+- Icon bootstrapped (`--make-icon`, then the .rc), `--shortcut` writes the Start Menu entry to
+  `everywho.exe -w` until the window exists.

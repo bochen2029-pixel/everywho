@@ -4,9 +4,9 @@
 shows who is writing which directory *this second* — per process, per agent session, per
 directory tree — headless for agents, live in a window, one C++ exe, no driver.**
 
-> **Status: blueprint (0.0.0).** This folder is the design, crystallised before the first line
-> of implementation: the contracts live in `src/*.h`, the reasoning in `docs/`, the rules in
-> `CLAUDE.md`. Nothing is built yet. Read `CLAUDE.md` first, then `docs/ARCHITECTURE.md`.
+> **Status: Stage 0 built (0.1.0) — the counters tier.** `everywho.exe` answers *who* and *how much* for every process (identity, agent attribution, per-disk rates) as the report, the watch TUI, JSON / NDJSON, the stamp, the spool, `--where`, `--selftest` and a two-tool MCP server. The ETW tier (*what*: directories, files, bursts) is Stage 1. The design below is what the build implements:
+> the contracts live in `src/*.h`, the reasoning in `docs/`, the rules in
+> `CLAUDE.md`. Read `CLAUDE.md` first, then `docs/ARCHITECTURE.md`.
 
 ## The gap it fills
 

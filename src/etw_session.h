@@ -111,7 +111,7 @@ private:
 // The decoder, exposed for --selftest: an EVENT_RECORD-shaped input (provider, opcode, version,
 // header flags, pid, tid, timestamp, payload) → RawEvent. Returns false for unknown layouts.
 struct RecordView {
-    const GUID* provider;
+    const struct _GUID* provider;   // GUID without pulling windows.h into this header
     uint8_t opcode, version;
     bool header64;
     uint32_t pid, tid;
