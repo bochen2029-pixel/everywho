@@ -1,0 +1,8 @@
+*.obj
+*.res
+*.exe
+*.pdb
+*.ilk
+*.log
+*.etl
+everywho.ini
