@@ -37,19 +37,19 @@ everywho starts in the ETW tier when it can, falls back to counters when it cann
 says which one it is in (`tier` in JSON, the status line in the window). `--elevate` relaunches
 through UAC; nothing ever elevates silently.
 
-## Use (planned surface — see `docs/CLI.md`)
+## Use  (Stage 0 builds the first two groups; lines marked · Stage 1+ wait for the ETW tier — see `docs/CLI.md`)
 
 ```
 everywho                    a 3-second sample, then the report: who wrote / read what, by process and directory
 everywho -w                 live TUI   q quit · s sort · g group (process ↔ directory) · p pause · f freeze
-everywho --gui              the window   (everywho-gui.exe opens it with no console at all — pin it)
+everywho --gui              the window   (everywho-gui.exe opens it with no console at all — pin it)   · Stage 3
 everywho -j                 one JSON snapshot            ·   everywho -j -w -n 2000 = NDJSON stream
 everywho --stamp            one-line receipt: MB/s per volume, queue, top writers — for timing rows
 everywho --spool            change-gated "lane<TAB>text" (fusor / TOWER tailer food, lane "io")
-everywho --paths            the files touched during the sample, as a tape → facet --files-from - / everywhere
-everywho --files-from T     watch only the paths in a tape: "is anyone touching these?"
-everywho --open PATH|DIR    who has it open — every process holding a handle to the path or below it (why can't I delete this)
-everywho --mcp              MCP stdio server — tools: io_snapshot, io_watch, io_stamp, io_paths
+everywho --paths            the files touched during the sample, as a tape → facet --files-from - / everywhere   · Stage 1+
+everywho --files-from T     watch only the paths in a tape: "is anyone touching these?"   · Stage 1+
+everywho --open PATH|DIR    who has it open — every process holding a handle to the path or below it   · Stage 2
+everywho --mcp              MCP stdio server — tools: io_snapshot, io_stamp now; io_watch, io_paths with the ETW tier
 everywho --where            tier, elevation, session state, other kernel loggers, the volume map
 everywho --selftest         decoder, fold, rates, identity, and a planted live workload when elevated
 ```
@@ -98,10 +98,10 @@ kernel or is marked derived.
 The **tape** — one full path per line, or JSONL with `path`/`file` — is the pipe between all
 of them; everywho both writes one (`--paths`) and reads one (`--files-from`).
 
-## Build (planned)
+## Build
 
 ```
-build.bat     # VS2022: cl /std:c++20 /O2 /W4 /permissive- /utf-8 /MT → everywho.exe + everywho-gui.exe
+build.bat     # VS2022: cl /std:c++20 /O2 /W4 /WX /permissive- /utf-8 /MT → everywho.exe (+ everywho-gui.exe once src/everywho_gui.cpp exists)
 ```
 
 Files: `src/etw_layouts.h` (the kernel events we decode: GUIDs, opcodes, field orders) ·

@@ -176,3 +176,29 @@ other loggers    NT Kernel Logger: free · Circular Kernel Context Logger: runni
 volumes          C: \Device\HarddiskVolume3 (disk 0, NVMe)   D: \Device\HarddiskVolume5 (disk 1)
 layouts          --verify-layouts: 21 verified, 0 divergent
 ```
+
+## Stage 0 build notes (0.1.0, the counters tier)
+
+What the shipped build answers, and how the contract above degrades without the ETW tier:
+
+- **Volumes** carry `disk_read_bps` / `disk_write_bps` / `read_iops` / `write_iops` / `queue` /
+  `busy_pct` from PDH; `file_*_bps` and the response percentiles are `null`.
+- **Processes** carry `file_read` / `file_write` / `other_bytes` (what the process asked for, from
+  the kernel's per-process counters) and `ops: {read, write, other}`; `disk_*`, `attributed_write`,
+  `files` and `top_dirs` are `null` / empty until Stage 1. `cwd` is `null` when the PEB could not
+  be read (another user's process, unelevated). `agent.rule` is `image`, `cmdline` (the session
+  came from `--resume=` / `--session-id`), `cwd` or `inherit`; `tape` arrives with the ETW tier.
+- `directories`, `files`, `bursts` are empty arrays; `session` is `null`; `tier` is `"counters"`.
+- Extra fields: `processes_seen` (every process the kernel listed), `processes_with_io`, `exited`
+  (processes that vanished during the window — their final counters are not recoverable in this
+  tier), and `total`.
+- **Report rows** group by process name *and* harness, so the Claude desktop app and the Claude
+  Code CLI (both `claude.exe`) never share a row; `--no-group` lists pids. `--min-mb` hides
+  rows below the threshold once three rows are shown.
+- **TUI keys**: `q` · `s` (write → read → disk → ops → files) · `g` · `p` · `f` · `1` / `2` / `3`
+  for a 1 s / 10 s / 60 s moving window.
+- `--sort` accepts `write | read | disk | ops | files | newfiles | name | pid`; `disk`, `files`
+  and `newfiles` order by zero until the ETW tier and fall back to write.
+- `--stamp` prints `dr` / `dw` (media) per disk; `fr` / `fw` (file-level per volume) appear with
+  the ETW tier. `--stamp -n MS --frames N` streams stamps.
+- `--mcp` serves `io_snapshot` and `io_stamp`; `io_watch` and `io_paths` are Stage 2.

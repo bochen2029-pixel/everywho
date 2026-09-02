@@ -3,7 +3,7 @@
 Each stage ends green (`--selftest`, the oracle where it applies, the driver where it applies),
 with a devlog entry carrying numbers, and one commit `everywho 0.X.0 — …`.
 
-## Stage 0 · counters tier, identity, the report — `0.1.0`
+## Stage 0 · counters tier, identity, the report — `0.1.0`  ✔ built 2026-09-02 (release v0.1.0; selftest ALL PASS, falsifier 100 %)
 **Build:** `app_util.h`, `who.cpp` (rundown-free identity from `NtQuerySystemInformation`
 process enumeration + enrichment), `counters.cpp` (I/O counters + disk performance deltas),
 `rates.h`, `where.cpp` with per-process accounting only, `everywho.cpp` with Snap / Watch / JSON /

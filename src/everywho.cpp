@@ -342,7 +342,7 @@ std::string agent_text(const Identity& id) {
     if (id.agent.any()) {
         std::string t = id.agent.harness;
         if (!id.agent.project.empty()) t += " \xC2\xB7 " + narrow(id.agent.project);
-        if (!id.agent.session.empty()) t += " \xC2\xB7 " + narrow(id.agent.session.substr(0, 8)) + "\xE2\x80\xA6";
+        if (!id.agent.session.empty()) t += " \xC2\xB7 " + narrow(id.agent.session.substr(0, 8));   // the first block of the uuid names the session well enough
         if (id.agent.rule && id.agent.rule[0] && std::string(id.agent.rule) != "tape") t += std::string(" (") + id.agent.rule + ")";
         return t;
     }
