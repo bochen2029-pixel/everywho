@@ -65,3 +65,25 @@ kernel stream. Everything's index remains the source for names at rest.
 ## ADR-012 · Names: `everywho.exe` and `everywho-gui.exe`
 The `every*` organs use `-gui` (everywhen); the console exe carries every mode and can open the
 window itself (`--gui`), as facet and vramtop do.
+
+## ADR-013 · Two backends, one RawEvent; classic first, manifest measured
+The classic NT-Kernel-Logger providers (MOF FileIo/DiskIo/Process/Thread) give one session with
+a full rundown of processes, threads and open-file names, and the layouts in `etw_layouts.h`.
+The manifest providers (`Microsoft-Windows-Kernel-File`, `-Disk`, `-Process`) can be enabled in
+a private session with no system-logger slot, decode with real TDH schemas, and carry paths on
+their delete/rename events, but offer no open-file rundown. Both produce the same `RawEvent`;
+`EtwConfig::backend` selects. Classic is implemented first because its rundown makes the
+one-shot window complete; Stage 1b measures the manifest path on the same oracle and may flip
+the default. Neither is a driver; both need the same privilege.
+
+## ADR-014 · The handle table is the rundown complement and the "who has this open" answer
+A scan of `SystemExtendedHandleInformation` yields (pid, FILE_OBJECT address, name) for every
+open file; the address is the same number the kernel's FileIo events carry, so the scan names
+long-held files from their first event and, filtered by path, answers `--open`. Name queries
+run on a worker with a timeout and skip known-hanging handle classes; the ETW thread never
+waits on one. This is the fork's `handlewho` folded in as a mechanism rather than a tool.
+
+## ADR-015 · Attribution inherits down the process tree
+An agent session's builds, shells, interpreters and formatters are its I/O. A process with no
+attribution of its own takes the nearest ancestor's, marked `rule: "inherit"`, walking at most
+eight parents and never across session boundaries. Raw per-pid numbers stay visible.

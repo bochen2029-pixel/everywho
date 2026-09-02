@@ -163,3 +163,52 @@ TDH is used only here; the hot path decodes from the tables.
 - Very long paths (> 32 KB) exist in principle; the decoder bounds string reads at the payload.
 - Volume letters change (USB, mounts): the device table refresh handles it; names decoded
   before a refresh keep the letter they had, which is the truthful history.
+
+## §9 · The manifest alternative (ADR-013) — verified on the reference box, 2026-09-02
+
+Windows 8+ also exposes the kernel's file, disk and process activity through **manifest-based
+providers** that a *private* session enables with `EnableTraceEx2` (no system-logger slot, no
+`NT Kernel Logger` name, still `SeSystemProfilePrivilege`). `logman query providers` on this box:
+
+| provider | GUID | what it replaces |
+|---|---|---|
+| `Microsoft-Windows-Kernel-File` | `{EDD08927-9CC4-4E65-B970-C2560FB5C289}` | FileIo_* |
+| `Microsoft-Windows-Kernel-Disk` | `{C7BDE69A-E1E0-4177-B6EF-283AD1525271}` | DiskIo_* |
+| `Microsoft-Windows-Kernel-Process` | `{22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}` | Process_/Thread_TypeGroup1 |
+| `Microsoft-Windows-Kernel-Network` | `{7DD42A49-5329-4832-8DFD-43D979153A88}` | (the network band, later) |
+| `Microsoft-Windows-Kernel-Registry` | `{70EB4F03-C1DE-4F73-A051-33D13D5413BD}` | (the registry facet, later) |
+
+Kernel-File keywords (the `MatchAnyKeyword` mask): `FILENAME 0x10` · `FILEIO 0x20` ·
+`OP_END 0x40` · `CREATE 0x80` · `READ 0x100` · `WRITE 0x200` · `DELETE_PATH 0x400` ·
+`RENAME_SETLINK_PATH 0x800` · `CREATE_NEW_FILE 0x1000`. Level `Informational (4)`.
+
+What changes against the classic backend:
+
+- **Decoding**: real TDH schemas per event id and version; the decoder can still cache offsets
+  per `(id, version)` and read fixed prefixes directly, so the hot path stays table-driven.
+- **Paths on delete and rename**: `DeletePath` / `RenamePath` / `SetLinkPath` events carry the
+  file path itself, so deletes and renames no longer depend on the FileObject map. `Create`
+  carries the name as before; `Read` / `Write` still carry only FileObject / FileKey.
+- **No open-file rundown**: nothing names files already open at session start. `handles.h`
+  fills that gap in both backends (one scan of the handle table after start, ADR-014), and with
+  the manifest backend it is the *only* source of those names — which is why Stage 1b measures
+  the nameless share on the oracle before deciding.
+- **Process events** come with image name, command line and the creating process; threads via
+  the same provider. Rundown of existing processes: `EnableTraceEx2` with
+  `EVENT_CONTROL_CODE_CAPTURE_STATE` asks the provider to emit its current state.
+- **Lifecycle**: a private session name, `ControlTrace(STOP)` on exit, no coexistence concerns
+  beyond the ordinary session limit (64).
+
+The `RawEvent` shape is unchanged; a second decoder feeds the same fold. `--where` reports which
+backend is active and why.
+
+## §3 addendum · naming files that were already open
+
+Whichever backend runs, one pass of `scan_open_files` (`handles.h`) immediately after the
+session starts feeds `FileObject → (pid, name)` into the collector's map: the kernel object
+address in the handle table is the same value the FileIo events carry. Long-held files
+(Everything's database, browser caches, log files, a session tape kept open by a harness) are
+then named from their first read or write instead of after their next open. The scan runs on a
+worker thread with a per-handle timeout and skips known-hanging handle classes; the collector
+never waits for it — events that arrive before the scan finishes are named retroactively at
+the next tick from the map.

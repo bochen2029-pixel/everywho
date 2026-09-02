@@ -27,3 +27,15 @@ Running notes, newest at the bottom. Decisions, measurements, test results, trap
   `NOMINMAX` before the include, and `(std::min)(…)` parenthesised so any include order works.
   Rule for the implementation: every new header goes through the same lone-compile check.
 - Next: Stage 0 per ROADMAP.md. Build the oracle before the engine in Stage 1.
+
+## 2026-09-02 · the fork review, folded in before a line of code
+
+- A forked session brainstormed the same tool as `iowho` (C:\facet\docs\next.md): shorter, but
+  it named the manifest providers, a treemap, files-per-minute, `--paths PID|NAME`, a handle
+  finder (`handlewho`), a port finder, and a thin fleet board. Taken into this blueprint: the
+  manifest backend as a measured alternative (ADR-013, ETW.md §9, `EtwConfig::backend`), the
+  handle scan as the open-file rundown and `--open` (ADR-014, `src/handles.h`), files/min as a
+  first-class rate, the treemap toggle in the window, and the inherit rule for process trees
+  (ADR-015). Left where they are: portwho (a network band later, ROADMAP "After") and the fleet
+  board (that is `muster`, the tool after this one). The effort estimate is now written down.
+- `next.md` in facet now points here as the canonical design; everywho is the name.

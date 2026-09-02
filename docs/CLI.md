@@ -13,6 +13,7 @@ everywho -j | --json        JSON:   one snapshot line; with -w: NDJSON, one line
 everywho --stamp            Stamp:  one io_stamp line (--json for the object)
 everywho --spool            Spool:  change-gated "lane<TAB>text" stream (lane "io")
 everywho --paths            Paths:  the files touched in the window, one full path per line (-0 NUL)
+everywho --open PATH|DIR    Open:   who has it open — every process holding a handle to the path or below it (JSON with -j)
 everywho --mcp              Mcp:    MCP stdio server (tools below)
 everywho --where            Where:  tier, elevation, privilege, session state, other loggers, volumes
 everywho --selftest         Selftest
@@ -44,7 +45,7 @@ FILTERS (each narrows the fold; all are visible in the report's FILTER line)
   --agents             only processes attributed to a harness (claude-code, dsh, codex, …)
 
 SHAPE
-  -s, --sort K         write | read | disk | ops | files | name | pid   (default write)
+  -s, --sort K         write | read | disk | ops | files | newfiles | name | pid   (default write; newfiles = files per minute)
   -g, --group          rows grouped by process name (chrome.exe ×14) — the default in the TUI
   --top N              rows per section (default 12)
   --depth N            directory tree levels below the top entries (default 2)
@@ -93,9 +94,22 @@ Colours and bars as in facet/vramtop: amber for ≥ 50 % share and for a non-zer
 
 ## Watch (TUI) keys
 
-`q` quit · `s` cycle sort (write → read → disk → ops → files) · `g` group by process ↔ by
+`q` quit · `s` cycle sort (write → read → disk → ops → files → newfiles) · `g` group by process ↔ by
 directory · `p` pause · `f` freeze (keep the current snapshot on screen while collection
 continues; `f` again to release) · `t` cycle tier view (attributed ↔ raw) · `1/10/60` moving window.
+
+## `--open PATH|DIR`
+
+```
+everywho --open C:\Users\user\AppData\Local\Everything\
+ pid    process         access      path
+ 17292  Everything.exe  rw          C:\Users\user\AppData\Local\Everything\Everything.db
+ 4      System          r           C:\Users\user\AppData\Local\Everything\Everything.db
+# 2 handles in 2 processes · scan 41 ms · 8,912 file objects · 3 name queries skipped (pipes)
+```
+
+The handle scan (`ARCHITECTURE.md` §2, ADR-014). `-j` gives `{"open":[{pid,name,access,path,directory}],"scan":{…}}`.
+Other users' processes need elevation; without it the line says how many were not openable.
 
 ## JSON
 

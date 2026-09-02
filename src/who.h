@@ -18,7 +18,7 @@ struct Agent {
     std::wstring project;         // the project slug or directory
     std::wstring session;         // the session uuid, when known
     std::wstring subagent;        // "agent-…" when the tape is a subagent's
-    const char* rule = "";        // which rule fired: "tape" | "cwd" | "image" | ""
+    const char* rule = "";        // which rule fired: "tape" | "cwd" | "image" | "inherit" | ""
 };
 
 struct Identity {
@@ -57,6 +57,11 @@ public:
 
     // Attribution by tape append: called by the fold when a write's path looks like a session tape.
     void on_tape_write(uint32_t pid, std::wstring_view path);
+
+    // The inherit rule (ADR-015): every process without an attribution of its own takes its nearest
+    // attributed ancestor's (at most 8 parents up, never across session ids), marked rule "inherit".
+    // Runs on the tick thread after enrich_pending(); cheap (pids are few, parents cached).
+    void attribute_by_ancestry();
 
     const Identity* find(uint32_t pid) const;
     std::vector<Identity> snapshot() const;              // copies, for views

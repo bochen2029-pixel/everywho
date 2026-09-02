@@ -48,6 +48,7 @@ everywho --stamp            one-line receipt: MB/s per volume, queue, top writer
 everywho --spool            change-gated "lane<TAB>text" (fusor / TOWER tailer food, lane "io")
 everywho --paths            the files touched during the sample, as a tape → facet --files-from - / everywhere
 everywho --files-from T     watch only the paths in a tape: "is anyone touching these?"
+everywho --open PATH|DIR    who has it open — every process holding a handle to the path or below it (why can't I delete this)
 everywho --mcp              MCP stdio server — tools: io_snapshot, io_watch, io_stamp, io_paths
 everywho --where            tier, elevation, session state, other kernel loggers, the volume map
 everywho --selftest         decoder, fold, rates, identity, and a planted live workload when elevated
@@ -105,9 +106,11 @@ build.bat     # VS2022: cl /std:c++20 /O2 /W4 /permissive- /utf-8 /MT → everyw
 
 Files: `src/etw_layouts.h` (the kernel events we decode: GUIDs, opcodes, field orders) ·
 `src/etw_session.h/.cpp` (the collector: session, consumer thread, decoder → `RawEvent`) ·
-`src/who.h/.cpp` (process and thread identity, agent attribution) · `src/where.h/.cpp` (the
-fold: directory trie, per-process and per-file accounting, bursts) · `src/rates.h` (windows,
-rings, sparklines) · `src/tape.h` (the tape contract) · `src/app_util.h` (options, formatting) ·
+`src/who.h/.cpp` (process and thread identity, agent attribution, the inherit rule) ·
+`src/where.h/.cpp` (the fold: directory trie, per-process and per-file accounting, bursts,
+files per minute) · `src/handles.h/.cpp` (the system handle table: names for files already
+open, and `--open`) · `src/rates.h` (windows, rings, sparklines) · `src/tape.h` (the tape
+contract) · `src/app_util.h` (options, formatting) ·
 `src/everywho.cpp` (console modes, JSON, MCP, stamp, spool, selftest) · `src/everywho_gui.cpp`
 (the window) · `tests/` (the planted-workload oracle and its harness) · `docs/` (this design).
 

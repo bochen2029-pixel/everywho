@@ -83,3 +83,22 @@ to the scratch folder, one to `docs/screenshot.png` when the operator says so.
 | 2 | report / TUI / stamp / spool / paths / MCP all read from the same snapshot; `--paths` of a plant run equals the manifest's file set; `--files-from` a tape sees only those files |
 | 3 | the driver's invariants; a `--shot` that shows the plant's process, directory and burst |
 | 4 | a fusor lane consumes the spool; `facet --files-from` folds everywho's tape; `everywhen locate` resolves a session tape hit everywho reported; muster reads the JSON |
+
+## 5 · Added after the fork review
+
+- **Handle scan (offline shape, live behaviour).** Live, any user: open a temp file in this
+  process, run `scan_open_files`; the file appears with this pid, the right DOS path and
+  `directory == false`; `who_has_open(<temp dir>)` returns this pid; the stats report zero
+  timeouts on a quiet box. Elevated: the scan also lists another user's processes and the
+  `denied` count is 0. Negative: a named pipe handle is classified `skipped_unsafe`, never
+  queried, and the scan still finishes under 500 ms with 10k file objects.
+- **`--open`** against a plant child that holds files open: every held file is listed with the
+  child's pid; after the child exits the list is empty.
+- **The inherit rule.** A plant child spawned by a plant parent that carries a tape attribution
+  reports `agent.rule == "inherit"` with the parent's session; a process in another session id
+  never inherits.
+- **files per minute.** Plant child 0 (200 files in one burst) shows `files_per_min` consistent
+  with its manifest window; `-s newfiles` puts it first.
+- **Stage 1b (manifest backend).** The same oracle, `--backend manifest`: attribution
+  byte-exact for writes and reads; deletes and renames carry paths without a FileObject
+  lookup; the nameless share is reported and compared with the classic run.

@@ -53,3 +53,39 @@ runs a storm → the snapshot boundary is being crossed; find the lock.
 - Per-thread breakdown inside a process (the thread table already exists).
 - Network I/O (`TcpIp` / `UdpIp` kernel providers) as a sibling band, then muster.
 - Registry I/O (`EVENT_TRACE_FLAG_REGISTRY`) as a facet: which process hammers the registry.
+
+## Additions after the fork review (2026-09-02, before implementation)
+
+- **Stage 1b - the manifest backend spike.** After the classic decoder is green, enable
+  `Microsoft-Windows-Kernel-File` / `-Disk` / `-Process` in a *private* session (`ETW.md` §9)
+  and measure against the same oracle: attribution exactness, decode cost, loss, and the
+  nameless share without the classic rundown. If the classic system-logger session is refused
+  on a box, or the manifest path is equal on the oracle and cheaper to keep alive, the manifest
+  backend becomes the default; `EtwConfig::backend` already carries the switch.
+- **Stage 1 - handles as the rundown complement** (`src/handles.h`): after the session starts,
+  one scan of the system handle table names every FILE_OBJECT already open, so long-held
+  files (databases, caches, log files, session tapes held open) are named from their first
+  event. Falsifier: a name query that hangs the collector; the scan runs on a worker with a
+  per-handle timeout, never on the ETW thread.
+- **Stage 2 - `--open PATH|DIR`**: who has this open, Process Explorer's find-handle as one
+  line with JSON; the same handle scan, filtered.
+- **Stage 2 - files per minute** as a first-class rate (`new_files` in every counter set,
+  `files_per_min` in the snapshot, `-s newfiles`): facet's provenance signal, live.
+- **Stage 3 - the treemap** (vramtop's, reused): `T` toggles the table to a treemap of process
+  × directory × bytes; the burst facet's live twin as a picture.
+- **Identity - the inherit rule**: a process with no agent attribution of its own takes its
+  nearest ancestor's (a build spawned by an agent session is that session's I/O), marked
+  `rule: "inherit"`.
+
+## Effort, honestly (the vramtop rhythm)
+
+| stage | days | what dominates |
+|---|---|---|
+| 0 | 1-2 | identity enrichment and the report's shape |
+| 1 | 3-4 | the oracle first, then the decoder, then `--verify-layouts` and the storm |
+| 1b | 1 | the manifest spike, measured, decided |
+| 2 | 3 | the fold's bounds, `--paths` / `--files-from`, MCP, spool, `--open` |
+| 3 | 3-4 | the window, the driver, the treemap |
+| 4 | 1-2 | seams and screenshots |
+
+About two and a half weeks of focused sessions; the fork's estimate of two was close.

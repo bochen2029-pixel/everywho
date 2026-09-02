@@ -50,6 +50,12 @@ tier and the loss.
   the filter line.
 - **Status**: the compiled filter, tier, events/s, lost events (amber), and the key hints.
 
+- **Treemap** (`T`): the table gives way to vramtop's treemap, reused — tiles are processes
+  (grouped by name), nested tiles their top directories, area = bytes in the current window,
+  colour = write share; hover names the tile, click = only, right-click = not, exactly like the
+  rail. It is the burst facet's live twin as a picture, and the view that answers "what just
+  wrote 2,000 files" at a glance.
+
 ## Behaviour
 
 - Collection runs on the collector thread; the tick thread swaps snapshots at `--interval`

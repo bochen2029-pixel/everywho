@@ -22,8 +22,14 @@ struct IoCounters {
     uint64_t unnamed = 0;                      // bytes whose file could not be named
     uint32_t ops[kOpKinds] = {};
     uint32_t files = 0;                        // distinct files touched
+    uint32_t new_files = 0;                    // files created in the window — files per minute is derived from this and window_ms
     void add(const IoCounters& o);
 };
+
+// facet's provenance signal, live: thousands a minute is a clone or extract, a dozen is an agent, one or two is a hand
+inline double files_per_min(uint32_t new_files, uint64_t window_ms) {
+    return window_ms ? (double)new_files * 60000.0 / (double)window_ms : 0.0;
+}
 
 struct PidShare { uint32_t pid = 0; uint64_t bytes = 0; };
 

@@ -48,6 +48,11 @@ struct RawEvent {
 };
 
 struct EtwConfig {
+    // Which kernel providers feed RawEvent (ADR-013). Classic = the NT-Kernel-Logger MOF providers in a
+    // system-logger-mode session (full rundown; etw_layouts.h). Manifest = Microsoft-Windows-Kernel-File /
+    // -Disk / -Process in a private session (no system-logger slot, TDH schemas, paths on delete/rename,
+    // no open-file rundown — handles.h fills that). Stage 1 implements Classic; Stage 1b measures Manifest.
+    enum class Backend { Classic, Manifest } backend = Backend::Classic;
     std::wstring session_name = L"everywho";
     uint32_t buffer_kb = 64;
     uint32_t min_buffers = 64;

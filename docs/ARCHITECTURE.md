@@ -37,6 +37,8 @@ bounded tables.
 | what is that 03:00 job touching | `everywho -w --name backup*` · `--pid N` | ETW |
 | why is the SSD pegged | `everywho --stamp` (queue, busy %, physical MB/s vs file MB/s) · `-w -s disk` | counters (rates) · ETW (who) |
 | is anyone touching these files | `facet --paths Q \| everywho --files-from - -w` | ETW |
+| who has this file or folder open (why can't I delete it) | `everywho --open C:\that\dir` | handles (elevated for other users' processes) |
+| is this a clone landing or a hand at work | `everywho -w -s newfiles` — files per minute per process and directory, facet's provenance signal live | ETW |
 | where did the last ten seconds land | `everywho --paths --sample-ms 10000 \| facet --files-from -` | ETW |
 | which session wrote the burst facet showed | `everywho -w --dir C:\that\dir` while it recurs; or the `--paths` tape into `everywhen locate` for `.jsonl` tapes | ETW |
 | a receipt beside a timing row | `everywho --stamp` (mirrors `vramtop --stamp`) | either |
@@ -62,6 +64,7 @@ bounded tables.
 | **fold** | `where.h/.cpp` | the directory trie with per-node, per-process, per-op accounting; the per-file table (bounded LRU); bursts (new-file clusters); the `Snapshot` (a frozen, renderable copy) | collector thread writes; tick thread snapshots |
 | **rates** | `rates.h` | interval accounting: 1 s ticks, 10 s and 60 s windows, per-volume and per-process history rings for sparklines | tick thread |
 | **tape** | `tape.h` | read/write/normalise path tapes (identical to facet's) | any |
+| **handles** | `handles.h/.cpp` | the system handle table: FILE_OBJECT → (pid, name) for files already open — the rundown complement at session start and the `--open PATH` answer; name queries on a worker with a timeout (ADR-014) | a worker thread, never the collector |
 | **console** | `everywho.cpp` | modes, ANSI rendering, JSON, NDJSON, stamp, spool, MCP, `--where`, `--selftest`, elevation relaunch | main thread |
 | **window** | `everywho_gui.cpp` | the rail, chips, the live table, the volume band, the driver seam, `--shot` | UI thread; collectors on theirs |
 
@@ -106,7 +109,10 @@ The **agent attribution rules**, in order, each marked in the record as the rule
    project from the cwd, session unknown.
 3. *image name*: `claude.exe`, `node.exe` with `claude` in the command line, `codex`, `cursor`,
    `dsh` markers → harness only.
-4. `vmmem*` → `Wsl`; pid 4 → `System`; session 0 services → `Service`.
+4. *inherit* (ADR-015): a process with no attribution of its own takes its nearest attributed
+   ancestor's — a compiler, shell or formatter spawned by an agent session is that session's
+   I/O — at most eight parents up, never across session ids.
+5. `vmmem*` → `Wsl`; pid 4 → `System`; session 0 services → `Service`.
 
 ### The fold (where)
 
@@ -120,7 +126,9 @@ The **agent attribution rules**, in order, each marked in the record as the rule
   ops, first/last qpc, deleted/renamed flags. Evicted files fold into their directory node and
   are not lost from totals.
 - **Bursts**: new-file creates clustered by time gap (facet's rule, 60 s) with their dominant
-  directory and pid — the live version of facet's write bursts.
+  directory and pid — the live version of facet's write bursts. Every counter set also carries
+  `new_files`, so `files_per_min` is a column and a sort (`-s newfiles`) everywhere, not just a
+  burst summary.
 - **Snapshot**: an immutable copy of the above (top-K everywhere, never the full tables) taken
   each tick; views render only snapshots; JSON is a snapshot serialised.
 

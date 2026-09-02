@@ -17,7 +17,7 @@ constexpr uint64_t kUnknown64 = ~0ull;             // "not reported" — never c
 constexpr uint64_t kTicksPerSec = 10000000ull;     // FILETIME resolution
 constexpr uint64_t kTicksPerDay = 864000000000ull;
 
-enum class SortKey { Write, Read, Disk, Ops, Files, Name, Pid };
+enum class SortKey { Write, Read, Disk, Ops, Files, NewFiles, Name, Pid };
 enum class Tier { Auto, Etw, Counters };
 
 // operation kinds, as a bit set (filters) and as an index (counters)
@@ -32,7 +32,7 @@ inline const char* op_name(int index) {
 }
 
 struct Opts {
-    enum class Mode { Auto, Snap, Watch, Gui, Json, Stamp, Spool, Paths, Mcp, Where, Selftest, MakeIcon, Shortcut, Help, Version };
+    enum class Mode { Auto, Snap, Watch, Gui, Json, Stamp, Spool, Paths, Open, Mcp, Where, Selftest, MakeIcon, Shortcut, Help, Version };
     Mode mode = Mode::Auto;
     bool json = false;                     // modifier: Snap/Watch emit JSON (NDJSON when repeating)
     // window
@@ -72,6 +72,8 @@ struct Opts {
     bool no_activate = false;
     // tapes
     bool nul = false;                      // -0: NUL-separated paths out
+    // --open PATH|DIR: who has it open (the handle scan, ADR-014)
+    std::wstring open_path;
 };
 
 inline const char* sort_name(SortKey s) {
@@ -80,6 +82,7 @@ inline const char* sort_name(SortKey s) {
         case SortKey::Disk: return "disk";
         case SortKey::Ops: return "ops";
         case SortKey::Files: return "files";
+        case SortKey::NewFiles: return "newfiles";
         case SortKey::Name: return "name";
         case SortKey::Pid: return "pid";
         default: return "write";
@@ -91,6 +94,7 @@ inline bool parse_sort(const std::string& s, SortKey& out) {
     else if (s == "disk") out = SortKey::Disk;
     else if (s == "ops") out = SortKey::Ops;
     else if (s == "files") out = SortKey::Files;
+    else if (s == "newfiles" || s == "rate") out = SortKey::NewFiles;
     else if (s == "name") out = SortKey::Name;
     else if (s == "pid") out = SortKey::Pid;
     else return false;
