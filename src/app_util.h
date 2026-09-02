@@ -32,7 +32,7 @@ inline const char* op_name(int index) {
 }
 
 struct Opts {
-    enum class Mode { Auto, Snap, Watch, Gui, Json, Stamp, Spool, Paths, Open, Mcp, Where, Selftest, MakeIcon, Shortcut, Help, Version };
+    enum class Mode { Auto, Snap, Watch, Gui, Json, Stamp, Spool, Paths, Open, Mcp, Where, About, Selftest, MakeIcon, Shortcut, Help, Version };
     Mode mode = Mode::Auto;
     bool json = false;                     // modifier: Snap/Watch emit JSON (NDJSON when repeating)
     // window

@@ -72,3 +72,10 @@ Running notes, newest at the bottom. Decisions, measurements, test results, trap
   `ops_other`; `Fold::snapshot(sort, cumulative, window_ms)`; `DevicePaths::set_table` for tests.
 - Icon bootstrapped (`--make-icon`, then the .rc), `--shortcut` writes the Start Menu entry to
   `everywho.exe -w` until the window exists.
+
+## 2026-09-02 · `--about`: the family's self-description contract (for peek)
+
+- `everywho --about` prints the organ's card as one JSON object (organ, version, path, purpose,
+  stage, verbs with examples, mcp{command,args,tools,register}, health{ok,tier,elevated,
+  profile_privilege,processes,disks,detail}, docs, tape). peek 0.3 reads it for `peek env`,
+  spawns the `mcp` command behind `peek --mcp`, and builds `peek fleet` from `-j --agents`.

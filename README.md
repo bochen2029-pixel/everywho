@@ -51,6 +51,7 @@ everywho --files-from T     watch only the paths in a tape: "is anyone touching 
 everywho --open PATH|DIR    who has it open — every process holding a handle to the path or below it   · Stage 2
 everywho --mcp              MCP stdio server — tools: io_snapshot, io_stamp now; io_watch, io_paths with the ETW tier
 everywho --where            tier, elevation, session state, other kernel loggers, the volume map
+everywho --about            the organ's self-description as JSON: verbs, MCP, health — what `peek env` reads
 everywho --selftest         decoder, fold, rates, identity, and a planted live workload when elevated
 ```
 

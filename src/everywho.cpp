@@ -789,6 +789,39 @@ int run_where(const Opts& o) {
     return have ? 0 : 2;
 }
 
+// ---------------------------------------------------------------- --about: the organ describes itself (the peek contract)
+// One JSON object every organ in the family emits so `peek env` can ask instead of guess:
+// name, version, path, purpose, verbs with an example each, the MCP command and its tools,
+// health right now, and where the docs are.
+int run_about() {
+    std::vector<ProcSample> procs;
+    std::string err;
+    const bool have = sample_processes(procs, &err);
+    DiskCounters d;
+    std::string derr;
+    const bool dok = d.open(&derr);
+    const bool priv = has_privilege(L"SeSystemProfilePrivilege");
+    const std::wstring exe = exe_path();
+    std::string j = "{\"organ\":\"everywho\",\"version\":" + jstr(kVersion) + ",\"path\":" + jw(exe) + ",\"family\":\"everything/facet · everywhere · everywhen · vramtop · everywho\"";
+    j += ",\"purpose\":\"who is touching what, right now: per-process I/O (bytes, ops) with identity and agent attribution, per-disk rates; the ETW tier adds directories and files\"";
+    j += ",\"stage\":\"0: counters tier\"";
+    j += ",\"verbs\":[";
+    j += "{\"verb\":\"everywho\",\"what\":\"3-second sample, the report: who wrote / read how much\",\"example\":\"everywho --sample-ms 2000\"},";
+    j += "{\"verb\":\"everywho -w\",\"what\":\"live TUI (q s g p f 1/2/3)\",\"example\":\"everywho -w\"},";
+    j += "{\"verb\":\"everywho -j\",\"what\":\"one JSON snapshot; -j -w = NDJSON\",\"example\":\"everywho -j --sample-ms 2000 --top 10\"},";
+    j += "{\"verb\":\"everywho --stamp\",\"what\":\"one-line receipt: MB/s per disk, queue, busy, top writers\",\"example\":\"everywho --stamp\"},";
+    j += "{\"verb\":\"everywho --spool\",\"what\":\"change-gated lane<TAB>text stream (lane io)\",\"example\":\"everywho --spool --frames 0\"},";
+    j += "{\"verb\":\"everywho --where\",\"what\":\"tier, elevation, privilege, process list, disks\",\"example\":\"everywho --where -j\"},";
+    j += "{\"verb\":\"everywho --agents\",\"what\":\"only processes attributed to a coding harness\",\"example\":\"everywho -j --agents\"}";
+    j += "]";
+    j += ",\"mcp\":{\"command\":" + jw(exe) + ",\"args\":[\"--mcp\"],\"tools\":[\"io_snapshot\",\"io_stamp\"],\"register\":" + jstr("claude mcp add everywho -- " + narrow(exe) + " --mcp") + "}";
+    j += ",\"health\":{\"ok\":" + jb(have) + ",\"tier\":\"counters\",\"elevated\":" + jb(is_elevated()) + ",\"profile_privilege\":" + jb(priv) + ",\"processes\":" + jn(procs.size()) +
+         ",\"disks\":" + jb(dok) + ",\"detail\":" + jstr(have ? ssprintf("%zu processes listed; disks %s; ETW tier %s", procs.size(), dok ? "ok" : "unavailable", priv ? "possible (privilege present)" : "needs --elevate") : err) + "}";
+    j += ",\"docs\":" + jw(exe_dir() + L"README.md") + ",\"tape\":{\"writes\":\"--paths (Stage 1+)\",\"reads\":\"--files-from (Stage 1+)\"}}\n";
+    write_out(j);
+    return have ? 0 : 2;
+}
+
 // ---------------------------------------------------------------- --elevate: relaunch through UAC, read back --out
 int run_elevate(int argc, wchar_t** argv, const Opts& o) {
     if (o.out_file.empty()) {
@@ -1090,6 +1123,7 @@ void print_help() {
   everywho --spool          change-gated "lane<TAB>text" stream (lane io) for a log tailer
   everywho --mcp            MCP stdio server: io_snapshot, io_stamp
   everywho --where          tier, elevation, privilege, the process list, PDH, volumes
+  everywho --about          the organ's self-description as JSON (verbs, MCP, health) - what peek env reads
   everywho --selftest       formatting, rates, tapes, name mapping, identity rules, live counters
   everywho --make-icon F    write the app icon as a .ico     everywho --shortcut [desktop]  Start Menu entry
 
@@ -1126,6 +1160,7 @@ int app_main(int argc, wchar_t** argv) {
         else if (a == "--spool") o.mode = Opts::Mode::Spool;
         else if (a == "--mcp") o.mode = Opts::Mode::Mcp;
         else if (a == "--where") o.mode = Opts::Mode::Where;
+        else if (a == "--about") { o.mode = Opts::Mode::About; o.json = true; }
         else if (a == "--selftest") o.mode = Opts::Mode::Selftest;
         else if (a == "--gui") o.mode = Opts::Mode::Gui;
         else if (a == "--paths") o.mode = Opts::Mode::Paths;
@@ -1193,6 +1228,7 @@ int app_main(int argc, wchar_t** argv) {
         case Opts::Mode::Spool: return run_watch(o, Opts::Mode::Spool);
         case Opts::Mode::Mcp: return run_mcp(o);
         case Opts::Mode::Where: return run_where(o);
+        case Opts::Mode::About: return run_about();
         case Opts::Mode::Selftest: return run_selftest(o);
         case Opts::Mode::MakeIcon: return write_icon_file(o.out_file);
         case Opts::Mode::Shortcut: return make_shortcut(o.out_file);
